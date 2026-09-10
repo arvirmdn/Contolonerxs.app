@@ -44,23 +44,35 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  // Kredensial khusus yang diizinkan masuk.
+  static const String _allowedUsername = 'arvirmdn';
+  static const String _allowedPassword = 'arvixnxx44';
+
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
-    // TODO: ganti dengan pemanggilan API login yang sesungguhnya
-    // (misalnya request ke backend di Railway)
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(milliseconds: 600));
 
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Login sebagai "${_usernameController.text}" (dummy, belum terhubung backend)'),
-      ),
-    );
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text;
+
+    if (username == _allowedUsername && password == _allowedPassword) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const HomePage()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Username atau password salah'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
   }
 
   @override
@@ -170,6 +182,37 @@ class _LoginPageState extends State<LoginPage> {
           borderRadius: BorderRadius.circular(20),
         ),
         child: const Icon(Icons.lock_person_rounded, color: Colors.white, size: 36),
+      ),
+    );
+  }
+}
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Contolonerxs'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Keluar',
+            onPressed: () {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+                (route) => false,
+              );
+            },
+          ),
+        ],
+      ),
+      body: const Center(
+        child: Text(
+          'Berhasil masuk sebagai arvirmdn',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }
