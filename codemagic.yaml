@@ -1,0 +1,32 @@
+workflows:
+  android-workflow:
+    name: Contolonerxs Android Build
+    max_build_duration: 30
+    instance_type: linux_x2
+    environment:
+      flutter: stable
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+    scripts:
+      - name: Generate Android platform files (jika belum ada)
+        script: |
+          if [ ! -d "android" ]; then
+            flutter create --platforms=android .
+          fi
+      - name: Get Flutter packages
+        script: flutter packages pub get
+      - name: Build APK
+        script: flutter build apk --release
+    artifacts:
+      - build/**/outputs/**/*.apk
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com
+        notify:
+          success: true
+          failure: true
