@@ -112,9 +112,12 @@ class _SplashPageState extends State<SplashPage>
   Widget build(BuildContext context) {
     return Scaffold(
       body: AnimatedBuilder(
+        // PENTING: seluruh isi splash (logo, nama, progress) HARUS ada di
+        // dalam `builder`, bukan di `child` — karena `child` di-cache dan
+        // cuma di-build sekali oleh Flutter, sehingga animasinya jadi
+        // "beku" (tidak pernah terlihat bergerak) walau controller jalan.
         animation: _controller,
-        builder: (context, child) {
-          // Gradient yang makin gelap halus seiring animasi berjalan
+        builder: (context, _) {
           return Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -134,40 +137,39 @@ class _SplashPageState extends State<SplashPage>
                 ],
               ),
             ),
-            child: child,
+            child: Stack(
+              children: [
+                // Lingkaran dekoratif lembut
+                Positioned(
+                  top: -60,
+                  right: -60,
+                  child: _glowCircle(180, 0.10),
+                ),
+                Positioned(
+                  bottom: -80,
+                  left: -70,
+                  child: _glowCircle(220, 0.08),
+                ),
+                SafeArea(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildLogo(),
+                        const SizedBox(height: 28),
+                        _buildName(),
+                        const SizedBox(height: 12),
+                        _buildTagline(),
+                        const SizedBox(height: 48),
+                        _buildProgress(),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           );
         },
-        child: Stack(
-          children: [
-            // Lingkaran dekoratif lembut
-            Positioned(
-              top: -60,
-              right: -60,
-              child: _glowCircle(180, 0.10),
-            ),
-            Positioned(
-              bottom: -80,
-              left: -70,
-              child: _glowCircle(220, 0.08),
-            ),
-            SafeArea(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildLogo(),
-                    const SizedBox(height: 28),
-                    _buildName(),
-                    const SizedBox(height: 12),
-                    _buildTagline(),
-                    const SizedBox(height: 48),
-                    _buildProgress(),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
