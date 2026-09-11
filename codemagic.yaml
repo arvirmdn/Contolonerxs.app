@@ -14,14 +14,28 @@ workflows:
       - name: Generate Android platform files (jika belum ada)
         script: |
           if [ ! -d "android" ]; then
-            flutter create --platforms=android .
+            # --org dipakai biar nama package aplikasi bukan default
+            # com.example lagi, jadi com.arvirmdn.contolonerxs
+            flutter create --platforms=android --org com.arvirmdn .
+            echo "NEW_ANDROID=true" >> $CM_ENV
           fi
       - name: Get Flutter packages
         script: flutter packages pub get
+      - name: Generate app icon custom
+        script: flutter pub run flutter_launcher_icons
+      - name: Siapkan folder android/ buat didownload (sekali saja)
+        script: |
+          # Zip folder android/ supaya bisa didownload dari halaman build
+          # ini SEKALI, lalu diupload manual ke repo GitHub kalau mau setup
+          # signing release (lihat README bagian "Setup signing release").
+          if [ "$NEW_ANDROID" = "true" ]; then
+            zip -r android-folder.zip android
+          fi
       - name: Build APK
         script: flutter build apk --release
     artifacts:
       - build/**/outputs/**/*.apk
+      - android-folder.zip
     publishing:
       email:
         recipients:
