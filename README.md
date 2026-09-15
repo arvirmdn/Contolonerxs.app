@@ -20,8 +20,19 @@ Kode dipecah per halaman biar gampang dicari/diedit (sebelumnya numplek di satu 
 - `lib/app.dart` — konfigurasi `MaterialApp` (tema, judul, halaman awal).
 - `lib/screens/splash_screen.dart` — halaman splash/loading di awal buka app.
 - `lib/screens/login_screen.dart` — halaman login (username & password, logic masih dummy/placeholder).
-- `lib/screens/home_screen.dart` — halaman setelah berhasil login.
+- `lib/screens/home_screen.dart` — halaman setelah berhasil login (bottom nav: Obrolan/Room/Musik/Pengaturan/Profil).
+- `lib/screens/music_screen.dart` — menu Musik: cari lagu, riwayat "Baru diputar", playlist, mini player & full player.
+- `lib/services/musikin_api.dart` — client buat manggil backend Musikin (search/stream/history/playlist).
+- `lib/config/musikin_config.dart` — **URL backend Musikin**. Kalau URL Railway-nya ganti, edit di sini aja.
 - `analysis_options.yaml` — aturan lint (biar warning kode jelek kedeteksi otomatis).
+
+## Menu Musik
+
+Nyambung ke backend [Musikin](https://backend-musik-apk-cntlnrxs-production.up.railway.app)
+(FastAPI + yt-dlp di Railway). Fiturnya: cari lagu dari YouTube, riwayat lagu
+yang baru diputar, bikin & ganti nama playlist, mini player + full player
+dengan seek bar. `codemagic.yaml` juga otomatis nambahin izin INTERNET ke
+APK release tiap build (perlu buat manggil API-nya) — nggak perlu diedit manual.
 
 ## App icon
 - `assets/icon/icon.png` — gambar icon custom (gembok + gradient, senada tema app).

@@ -19,6 +19,12 @@ workflows:
             flutter create --platforms=android --org com.arvirmdn .
             echo "NEW_ANDROID=true" >> $CM_ENV
           fi
+      - name: Tambah izin INTERNET (buat fitur Musik manggil API)
+        script: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if ! grep -q "android.permission.INTERNET" "$MANIFEST"; then
+            sed -i 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n    <uses-permission android:name="android.permission.INTERNET"/>#' "$MANIFEST"
+          fi
       - name: Get Flutter packages
         script: flutter packages pub get
       - name: Generate app icon custom
