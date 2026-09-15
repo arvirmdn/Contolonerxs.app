@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import 'login_screen.dart';
+import 'music_screen.dart';
 
 // ---------------------------------------------------------------------------
 // HALAMAN HOME — layout ala Telegram (Obrolan/Room/Pengaturan/Profil),
@@ -19,7 +20,7 @@ class _HomePageState extends State<HomePage> {
   static const Color _primary = Color(0xFF4F46E5);
   static const Color _accent = Color(0xFF7C3AED);
 
-  // 0 = Obrolan, 1 = Room, 2 = Pengaturan, 3 = Profil
+  // 0 = Obrolan, 1 = Room, 2 = Musik, 3 = Pengaturan, 4 = Profil
   int _navIndex = 0;
   // 0 = Semua Obrolan, 1 = Arsip (cuma dipakai kalau _navIndex == 0)
   int _chatTab = 0;
@@ -159,16 +160,22 @@ class _HomePageState extends State<HomePage> {
                           onTap: () => setState(() => _navIndex = 1),
                         ),
                         _NavItem(
-                          icon: Icons.settings_rounded,
-                          label: 'Pengaturan',
+                          icon: Icons.music_note_rounded,
+                          label: 'Musik',
                           selected: _navIndex == 2,
                           onTap: () => setState(() => _navIndex = 2),
                         ),
                         _NavItem(
-                          icon: Icons.person_rounded,
-                          label: 'Profil',
+                          icon: Icons.settings_rounded,
+                          label: 'Pengaturan',
                           selected: _navIndex == 3,
                           onTap: () => setState(() => _navIndex = 3),
+                        ),
+                        _NavItem(
+                          icon: Icons.person_rounded,
+                          label: 'Profil',
+                          selected: _navIndex == 4,
+                          onTap: () => setState(() => _navIndex = 4),
                         ),
                       ],
                     ),
@@ -203,6 +210,11 @@ class _HomePageState extends State<HomePage> {
               : 'Room yang kamu ikuti bakal muncul di sini',
         );
       case 2:
+        return const Padding(
+          padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
+          child: MusicScreen(),
+        );
+      case 3:
         return _buildPengaturan();
       default:
         return _buildProfil();
