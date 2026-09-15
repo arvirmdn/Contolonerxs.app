@@ -24,7 +24,7 @@ workflows:
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           if ! grep -q "android.permission.INTERNET" "$MANIFEST"; then
             sed -i.bak 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#<manifest xmlns:android="http://schemas.android.com/apk/res/android">\
-    <uses-permission android:name="android.permission.INTERNET"/>#' "$MANIFEST"
+            <uses-permission android:name="android.permission.INTERNET"/>#' "$MANIFEST"
             rm -f "$MANIFEST.bak"
           fi
       - name: Get Flutter packages
