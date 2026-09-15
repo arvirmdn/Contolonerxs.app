@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../services/auth_service.dart';
 import 'login_screen.dart';
 import 'music_screen.dart';
 
@@ -239,7 +240,9 @@ class _HomePageState extends State<HomePage> {
               Icons.logout_rounded,
               'Keluar',
               danger: true,
-              onTap: () {
+              onTap: () async {
+                await AuthService.instance.logout();
+                if (!context.mounted) return;
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const LoginPage()),
                   (route) => false,

@@ -4,14 +4,20 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../services/auth_service.dart';
 import 'home_screen.dart';
 
 // ---------------------------------------------------------------------------
-// HALAMAN LOGIN — glassmorphism, glow neon, animasi gembok penuh
+// HALAMAN LOGIN — glassmorphism, glow neon, animasi gembok penuh.
+// Sekarang ada 2 tab: MASUK & DAFTAR (akun disimpan lokal di perangkat
+// lewat AuthService).
 // ---------------------------------------------------------------------------
 
 // Status animasi gembok pada halaman login
 enum _LockState { idle, typing, wrong, success }
+
+// Mode form yang sedang aktif
+enum _AuthMode { login, register }
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -24,10 +30,15 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmController = TextEditingController();
+
+  _AuthMode _mode = _AuthMode.login;
 
   bool _obscurePassword = true;
+  bool _obscureConfirm = true;
   bool _isLoading = false;
   bool _showError = false;
+  String _errorMessage = '';
 
   // Animasi gembok: idle | mengetik | salah | berhasil (terbuka)
   late final AnimationController _lockAnimCtrl;
@@ -42,9 +53,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   static const Color _accent = Color(0xFF7C3AED);
   static const Color _success = Color(0xFF16A34A);
 
-  // Kredensial khusus yang diizinkan masuk.
-  static const String _allowedUsername = 'arvirmdn';
-  static const String _allowedPassword = 'arvixnxx44';
+  bool get _isRegister => _mode == _AuthMode.register;
 
   @override
   void initState() {
@@ -68,7 +77,22 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     _bgCtrl.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
+    _confirmController.dispose();
     super.dispose();
+  }
+
+  // --- Ganti tab Masuk / Daftar ---------------------------------------------
+
+  void _switchMode(_AuthMode mode) {
+    if (_mode == mode) return;
+    setState(() {
+      _mode = mode;
+      _showError = false;
+      _passwordController.clear();
+      _confirmController.clear();
+      _lockState = _LockState.idle;
+    });
+    _formKey.currentState?.reset();
   }
 
   // --- Animasi gembok -------------------------------------------------------
@@ -90,7 +114,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       });
   }
 
-  // Saat kredensial salah: gembok bergetar kencang + menyala merah
+  // Saat gagal (salah kredensial / nama sudah dipakai): gembok bergetar
+  // kencang + menyala merah
   void _playWrong() {
     setState(() {
       _lockState = _LockState.wrong;
@@ -101,7 +126,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     });
   }
 
-  // Saat kredensial benar: gembok terbuka, membesar dengan pop elastis,
+  // Saat berhasil: gembok terbuka, membesar dengan pop elastis,
   // berubah hijau, lalu pindah ke halaman Home
   void _playSuccess() {
     setState(() {
@@ -117,25 +142,55 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     });
   }
 
-  Future<void> _handleLogin() async {
+  Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
-    await Future.delayed(const Duration(milliseconds: 700));
-
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
     final username = _usernameController.text.trim();
     final password = _passwordController.text;
 
-    if (username == _allowedUsername && password == _allowedPassword) {
-      // Gembok terbuka -> animasi sukses -> menuju Home
-      _playSuccess();
-    } else {
-      // Banner error inline + gembok bergetar + merah
-      setState(() => _showError = true);
+    try {
+      if (_isRegister) {
+        await AuthService.instance.register(
+          username: username,
+          password: password,
+        );
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        _playSuccess();
+      } else {
+        final ok = await AuthService.instance.login(
+          username: username,
+          password: password,
+        );
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        if (ok) {
+          _playSuccess();
+        } else {
+          setState(() {
+            _showError = true;
+            _errorMessage = 'Nama atau sandi salah. Coba lagi.';
+          });
+          _playWrong();
+        }
+      }
+    } on AuthApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _showError = true;
+        _errorMessage = e.message;
+      });
+      _playWrong();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _showError = true;
+        _errorMessage = 'Terjadi kesalahan. Coba lagi.';
+      });
       _playWrong();
     }
   }
@@ -276,21 +331,39 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Masuk untuk melanjutkan',
+                  _isRegister
+                      ? 'Buat akun baru untuk melanjutkan'
+                      : 'Masuk untuk melanjutkan',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     color: Colors.white.withOpacity(0.65),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 22),
+                _buildModeToggle(),
+                const SizedBox(height: 18),
                 _buildErrorBanner(),
-                const SizedBox(height: 16),
+                const SizedBox(height: 4),
                 _buildUsernameField(),
                 const SizedBox(height: 16),
                 _buildPasswordField(),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 260),
+                  curve: Curves.easeOutCubic,
+                  alignment: Alignment.topCenter,
+                  child: _isRegister
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const SizedBox(height: 16),
+                            _buildConfirmPasswordField(),
+                          ],
+                        )
+                      : const SizedBox(width: double.infinity),
+                ),
                 const SizedBox(height: 24),
-                _buildLoginButton(),
+                _buildSubmitButton(),
                 const SizedBox(height: 16),
                 Text(
                   'AMAN  •  CEPAT  •  TERPERCAYA',
@@ -310,6 +383,66 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     );
   }
 
+  // Tab pemilih Masuk / Daftar — pill switcher senada tema glass
+  Widget _buildModeToggle() {
+    Widget tab(String label, _AuthMode mode) {
+      final bool active = _mode == mode;
+      return Expanded(
+        child: GestureDetector(
+          onTap: () => _switchMode(mode),
+          behavior: HitTestBehavior.opaque,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.symmetric(vertical: 11),
+            decoration: BoxDecoration(
+              gradient: active
+                  ? const LinearGradient(
+                      colors: [Color(0xFF6D64F0), _accent],
+                    )
+                  : null,
+              borderRadius: BorderRadius.circular(13),
+              boxShadow: active
+                  ? [
+                      BoxShadow(
+                        color: _accent.withOpacity(0.45),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: active ? Colors.white : Colors.white.withOpacity(0.55),
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Row(
+        children: [
+          tab('Masuk', _AuthMode.login),
+          tab('Daftar', _AuthMode.register),
+        ],
+      ),
+    );
+  }
+
   // Banner error inline (menggantikan SnackBar) — muncul dengan animasi halus
   Widget _buildErrorBanner() {
     return AnimatedSize(
@@ -318,6 +451,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       alignment: Alignment.topCenter,
       child: _showError
           ? Container(
+              margin: const EdgeInsets.only(bottom: 16),
               padding: const EdgeInsets.symmetric(
                 horizontal: 14,
                 vertical: 11,
@@ -339,7 +473,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Username atau password salah. Coba lagi.',
+                      _errorMessage,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -367,7 +501,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         Color colorA = _primary;
         Color colorB = _accent;
         Color glow = _accent;
-        IconData icon = Icons.lock_person_rounded;
+        IconData icon =
+            _isRegister ? Icons.person_add_alt_1_rounded : Icons.lock_person_rounded;
         Widget lock = _lockBox(colorA, colorB, glow, icon);
 
         if (_lockState == _LockState.typing) {
@@ -410,7 +545,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             Curves.easeOut.transform(t),
           )!;
           glow = _success;
-          icon = Icons.lock_open_rounded;
+          icon = _isRegister
+              ? Icons.check_circle_rounded
+              : Icons.lock_open_rounded;
           lock = Transform.scale(
             scale: 0.65 + 0.45 * pop,
             child: _lockBox(colorA, colorB, glow, icon),
@@ -529,12 +666,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       ),
       cursorColor: const Color(0xFFA78BFA),
       decoration: _fieldDecoration(
-        label: 'Username',
+        label: 'Nama',
         prefix: Icons.person_outline,
       ),
       validator: (value) {
         if (value == null || value.trim().isEmpty) {
-          return 'Username tidak boleh kosong';
+          return 'Nama tidak boleh kosong';
         }
         return null;
       },
@@ -552,7 +689,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       ),
       cursorColor: const Color(0xFFA78BFA),
       decoration: _fieldDecoration(
-        label: 'Password',
+        label: 'Sandi',
         prefix: Icons.lock_outline,
         suffix: IconButton(
           icon: Icon(
@@ -569,17 +706,56 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       ),
       validator: (value) {
         if (value == null || value.isEmpty) {
-          return 'Password tidak boleh kosong';
+          return 'Sandi tidak boleh kosong';
         }
         if (value.length < 4) {
-          return 'Password minimal 4 karakter';
+          return 'Sandi minimal 4 karakter';
         }
         return null;
       },
     );
   }
 
-  Widget _buildLoginButton() {
+  Widget _buildConfirmPasswordField() {
+    return TextFormField(
+      controller: _confirmController,
+      onChanged: (_) => _onTyping(),
+      obscureText: _obscureConfirm,
+      style: GoogleFonts.plusJakartaSans(
+        fontSize: 14,
+        color: Colors.white,
+      ),
+      cursorColor: const Color(0xFFA78BFA),
+      decoration: _fieldDecoration(
+        label: 'Ulangi Sandi',
+        prefix: Icons.lock_reset_outlined,
+        suffix: IconButton(
+          icon: Icon(
+            _obscureConfirm
+                ? Icons.visibility_off_outlined
+                : Icons.visibility_outlined,
+            color: Colors.white.withOpacity(0.65),
+            size: 20,
+          ),
+          onPressed: () {
+            setState(() => _obscureConfirm = !_obscureConfirm);
+          },
+        ),
+      ),
+      validator: (value) {
+        if (!_isRegister) return null;
+        if (value == null || value.isEmpty) {
+          return 'Ulangi sandi kamu';
+        }
+        if (value != _passwordController.text) {
+          return 'Sandi tidak sama';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildSubmitButton() {
     return Container(
       height: 54,
       decoration: BoxDecoration(
@@ -599,7 +775,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
-          onTap: _isLoading ? null : _handleLogin,
+          onTap: _isLoading ? null : _handleSubmit,
           borderRadius: BorderRadius.circular(16),
           child: Center(
             child: _isLoading
@@ -612,7 +788,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                     ),
                   )
                 : Text(
-                    'Masuk',
+                    _isRegister ? 'Daftar' : 'Masuk',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
