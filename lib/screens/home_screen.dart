@@ -28,6 +28,22 @@ class _HomePageState extends State<HomePage> {
   // 0 = Buat Room, 1 = Gabung Room (cuma dipakai kalau _navIndex == 1)
   int _roomTab = 0;
 
+  bool _searchActive = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileUsername();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -60,24 +76,86 @@ class _HomePageState extends State<HomePage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Contolonerxs',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.2,
-                          ),
+                        Expanded(
+                          child: _searchActive
+                              ? TextField(
+                                  controller: _searchController,
+                                  autofocus: true,
+                                  style: const TextStyle(color: Colors.white, fontSize: 15),
+                                  cursorColor: Colors.white,
+                                  decoration: InputDecoration(
+                                    isDense: true,
+                                    border: InputBorder.none,
+                                    hintText: _navIndex == 1 ? 'Cari room...' : 'Cari obrolan...',
+                                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.45)),
+                                  ),
+                                  onChanged: (v) => setState(() => _searchQuery = v),
+                                )
+                              : const Text(
+                                  'Contolonerxs',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
                         ),
                         Row(
                           children: [
-                            IconButton(
-                              icon: const Icon(Icons.search_rounded, color: Colors.white),
-                              onPressed: () {},
-                            ),
-                            IconButton(
+                            if (_navIndex == 0 || _navIndex == 1)
+                              IconButton(
+                                icon: Icon(
+                                  _searchActive ? Icons.close_rounded : Icons.search_rounded,
+                                  color: Colors.white,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _searchActive = !_searchActive;
+                                    if (!_searchActive) {
+                                      _searchController.clear();
+                                      _searchQuery = '';
+                                    }
+                                  });
+                                },
+                              ),
+                            PopupMenuButton<String>(
                               icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
-                              onPressed: () {},
+                              color: const Color(0xFF2E2A5C),
+                              onSelected: (value) async {
+                                if (value == 'pengaturan') {
+                                  _setNavIndex(3);
+                                } else if (value == 'keluar') {
+                                  await AuthService.instance.logout();
+                                  if (!context.mounted) return;
+                                  Navigator.of(context).pushAndRemoveUntil(
+                                    MaterialPageRoute(builder: (_) => const LoginPage()),
+                                    (route) => false,
+                                  );
+                                }
+                              },
+                              itemBuilder: (context) => const [
+                                PopupMenuItem(
+                                  value: 'pengaturan',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.settings_rounded, color: Colors.white, size: 19),
+                                      SizedBox(width: 10),
+                                      Text('Pengaturan', style: TextStyle(color: Colors.white)),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  value: 'keluar',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.logout_rounded, color: Colors.redAccent, size: 19),
+                                      SizedBox(width: 10),
+                                      Text('Keluar', style: TextStyle(color: Colors.redAccent)),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -152,31 +230,31 @@ class _HomePageState extends State<HomePage> {
                           label: 'Obrolan',
                           badgeCount: 3,
                           selected: _navIndex == 0,
-                          onTap: () => setState(() => _navIndex = 0),
+                          onTap: () => _setNavIndex(0),
                         ),
                         _NavItem(
                           icon: Icons.meeting_room_rounded,
                           label: 'Room',
                           selected: _navIndex == 1,
-                          onTap: () => setState(() => _navIndex = 1),
+                          onTap: () => _setNavIndex(1),
                         ),
                         _NavItem(
                           icon: Icons.music_note_rounded,
                           label: 'Musik',
                           selected: _navIndex == 2,
-                          onTap: () => setState(() => _navIndex = 2),
+                          onTap: () => _setNavIndex(2),
                         ),
                         _NavItem(
                           icon: Icons.settings_rounded,
                           label: 'Pengaturan',
                           selected: _navIndex == 3,
-                          onTap: () => setState(() => _navIndex = 3),
+                          onTap: () => _setNavIndex(3),
                         ),
                         _NavItem(
                           icon: Icons.person_rounded,
                           label: 'Profil',
                           selected: _navIndex == 4,
-                          onTap: () => setState(() => _navIndex = 4),
+                          onTap: () => _setNavIndex(4),
                         ),
                       ],
                     ),
@@ -193,6 +271,14 @@ class _HomePageState extends State<HomePage> {
   Widget _buildContent() {
     switch (_navIndex) {
       case 0:
+        if (_searchActive && _searchQuery.trim().isNotEmpty) {
+          return _EmptyState(
+            key: const ValueKey('search-chat'),
+            icon: Icons.search_off_rounded,
+            title: 'Tidak ditemukan',
+            subtitle: 'Gak ada obrolan yang cocok dengan "$_searchQuery"',
+          );
+        }
         return _EmptyState(
           key: ValueKey(_chatTab),
           icon: Icons.forum_rounded,
@@ -202,6 +288,14 @@ class _HomePageState extends State<HomePage> {
               : 'Obrolan yang diarsipkan bakal muncul di sini',
         );
       case 1:
+        if (_searchActive && _searchQuery.trim().isNotEmpty) {
+          return _EmptyState(
+            key: const ValueKey('search-room'),
+            icon: Icons.search_off_rounded,
+            title: 'Tidak ditemukan',
+            subtitle: 'Gak ada room yang cocok dengan "$_searchQuery"',
+          );
+        }
         return _EmptyState(
           key: ValueKey(_roomTab),
           icon: _roomTab == 0 ? Icons.add_circle_outline_rounded : Icons.group_add_rounded,
@@ -230,11 +324,17 @@ class _HomePageState extends State<HomePage> {
         padding: EdgeInsets.zero,
         child: Column(
           children: [
-            _settingsTile(Icons.notifications_rounded, 'Notifikasi'),
+            _settingsTile(
+              Icons.lock_rounded,
+              'Privasi & Keamanan',
+              onTap: () => _showChangePasswordDialog(context),
+            ),
             _divider(),
-            _settingsTile(Icons.lock_rounded, 'Privasi & Keamanan'),
-            _divider(),
-            _settingsTile(Icons.palette_rounded, 'Tampilan'),
+            _settingsTile(
+              Icons.info_rounded,
+              'Tentang Aplikasi',
+              onTap: () => _showAboutDialog(context),
+            ),
             _divider(),
             _settingsTile(
               Icons.logout_rounded,
@@ -252,6 +352,138 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showChangePasswordDialog(BuildContext context) {
+    final oldCtrl = TextEditingController();
+    final newCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+    bool loading = false;
+    String? error;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            Future<void> submit() async {
+              if (oldCtrl.text.isEmpty || newCtrl.text.isEmpty) {
+                setDialogState(() => error = 'Semua kolom wajib diisi');
+                return;
+              }
+              if (newCtrl.text.length < 4) {
+                setDialogState(() => error = 'Sandi baru minimal 4 karakter');
+                return;
+              }
+              if (newCtrl.text != confirmCtrl.text) {
+                setDialogState(() => error = 'Ulangi sandi baru tidak cocok');
+                return;
+              }
+              setDialogState(() {
+                loading = true;
+                error = null;
+              });
+              try {
+                await AuthService.instance.changePassword(
+                  oldPassword: oldCtrl.text,
+                  newPassword: newCtrl.text,
+                );
+                if (!dialogContext.mounted) return;
+                Navigator.of(dialogContext).pop();
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Sandi berhasil diubah')),
+                );
+              } on AuthApiException catch (e) {
+                setDialogState(() {
+                  loading = false;
+                  error = e.message;
+                });
+              } catch (_) {
+                setDialogState(() {
+                  loading = false;
+                  error = 'Terjadi kesalahan, coba lagi';
+                });
+              }
+            }
+
+            return AlertDialog(
+              backgroundColor: const Color(0xFF2E2A5C),
+              title: const Text('Ubah Sandi', style: TextStyle(color: Colors.white)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (error != null) ...[
+                    Text(error!, style: const TextStyle(color: Colors.redAccent, fontSize: 12.5)),
+                    const SizedBox(height: 10),
+                  ],
+                  _passwordField(oldCtrl, 'Sandi lama'),
+                  const SizedBox(height: 10),
+                  _passwordField(newCtrl, 'Sandi baru'),
+                  const SizedBox(height: 10),
+                  _passwordField(confirmCtrl, 'Ulangi sandi baru'),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: loading ? null : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Batal', style: TextStyle(color: Colors.white70)),
+                ),
+                FilledButton(
+                  onPressed: loading ? null : submit,
+                  child: loading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Simpan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _passwordField(TextEditingController controller, String hint) {
+    return TextField(
+      controller: controller,
+      obscureText: true,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.08),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+
+  void _showAboutDialog(BuildContext context) {
+    showAboutDialog(
+      context: context,
+      applicationName: 'Contolonerxs',
+      applicationVersion: '1.0.0',
+      applicationIcon: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: _primary,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Icon(Icons.lock_person_rounded, color: Colors.white, size: 30),
+      ),
+      children: const [
+        SizedBox(height: 12),
+        Text('Aman • Cepat • Terpercaya'),
+      ],
     );
   }
 
@@ -274,6 +506,26 @@ class _HomePageState extends State<HomePage> {
 
   Widget _divider() => Divider(color: Colors.white.withOpacity(0.10), height: 1);
 
+  String? _profileUsername;
+
+  Future<void> _loadProfileUsername() async {
+    final username = await AuthService.instance.currentUser();
+    if (mounted) {
+      setState(() => _profileUsername = username);
+    }
+  }
+
+  void _setNavIndex(int index) {
+    setState(() {
+      _navIndex = index;
+      if (index != 0 && index != 1) {
+        _searchActive = false;
+        _searchController.clear();
+        _searchQuery = '';
+      }
+    });
+  }
+
   Widget _buildProfil() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -294,9 +546,26 @@ class _HomePageState extends State<HomePage> {
               child: const Icon(Icons.person_rounded, color: Colors.white, size: 44),
             ),
             const SizedBox(height: 18),
-            const Text(
-              'arvirmdn',
-              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _profileUsername ?? '...',
+                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: () => _showChangeUsernameDialog(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.edit_rounded, color: Colors.white, size: 14),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 6),
             Text(
@@ -306,6 +575,98 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showChangeUsernameDialog(BuildContext context) {
+    final nameCtrl = TextEditingController(text: _profileUsername ?? '');
+    bool loading = false;
+    String? error;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            Future<void> submit() async {
+              final newName = nameCtrl.text.trim();
+              if (newName.isEmpty) {
+                setDialogState(() => error = 'Nama tidak boleh kosong');
+                return;
+              }
+              setDialogState(() {
+                loading = true;
+                error = null;
+              });
+              try {
+                final updated = await AuthService.instance.updateUsername(newName);
+                if (!dialogContext.mounted) return;
+                Navigator.of(dialogContext).pop();
+                if (!mounted) return;
+                setState(() => _profileUsername = updated);
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Nama akun berhasil diubah')),
+                );
+              } on AuthApiException catch (e) {
+                setDialogState(() {
+                  loading = false;
+                  error = e.message;
+                });
+              } catch (_) {
+                setDialogState(() {
+                  loading = false;
+                  error = 'Terjadi kesalahan, coba lagi';
+                });
+              }
+            }
+
+            return AlertDialog(
+              backgroundColor: const Color(0xFF2E2A5C),
+              title: const Text('Ganti Nama Akun', style: TextStyle(color: Colors.white)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (error != null) ...[
+                    Text(error!, style: const TextStyle(color: Colors.redAccent, fontSize: 12.5)),
+                    const SizedBox(height: 10),
+                  ],
+                  TextField(
+                    controller: nameCtrl,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'Nama baru',
+                      hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.08),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: loading ? null : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Batal', style: TextStyle(color: Colors.white70)),
+                ),
+                FilledButton(
+                  onPressed: loading ? null : submit,
+                  child: loading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Simpan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
