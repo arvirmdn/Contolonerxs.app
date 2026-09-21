@@ -114,4 +114,51 @@ class AuthApi {
           .timeout(const Duration(seconds: 15));
     });
   }
+
+  static Future<void> changePassword({
+    required String token,
+    required String oldPassword,
+    required String newPassword,
+  }) {
+    return _guard(() async {
+      final uri = _base.replace(path: '/api/auth/change-password');
+      final res = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'token': token,
+              'old_password': oldPassword,
+              'new_password': newPassword,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (res.statusCode != 200) {
+        throw AuthApiException(_errorMessage(res, 'Gagal ubah sandi (${res.statusCode}).'));
+      }
+    });
+  }
+
+  static Future<String> updateUsername({
+    required String token,
+    required String newUsername,
+  }) {
+    return _guard(() async {
+      final uri = _base.replace(path: '/api/auth/update-username');
+      final res = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'token': token, 'new_username': newUsername}),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (res.statusCode != 200) {
+        throw AuthApiException(_errorMessage(res, 'Gagal ubah nama (${res.statusCode}).'));
+      }
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      return data['username'] as String;
+    });
+  }
 }

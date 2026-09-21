@@ -77,6 +77,36 @@ class AuthService {
     await _clearSession();
   }
 
+  /// Ubah sandi akun yang lagi login. Melempar [AuthApiException] kalau
+  /// sandi lama salah, sandi baru terlalu pendek, atau sesi tidak valid.
+  Future<void> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(_tokenKey);
+    if (token == null) {
+      throw AuthApiException('Sesi tidak valid, silakan masuk lagi');
+    }
+    await AuthApi.changePassword(
+      token: token,
+      oldPassword: oldPassword,
+      newPassword: newPassword,
+    );
+  }
+
+  /// Ganti nama akun yang lagi login. Cache nama lokal ikut diperbarui.
+  Future<String> updateUsername(String newUsername) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(_tokenKey);
+    if (token == null) {
+      throw AuthApiException('Sesi tidak valid, silakan masuk lagi');
+    }
+    final updated = await AuthApi.updateUsername(token: token, newUsername: newUsername);
+    await prefs.setString(_usernameKey, updated);
+    return updated;
+  }
+
   Future<void> _clearSession() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
