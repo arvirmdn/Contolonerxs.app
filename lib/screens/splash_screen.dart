@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../services/auth_service.dart';
+import 'home_screen.dart';
 import 'login_screen.dart';
 
 // ---------------------------------------------------------------------------
@@ -26,9 +28,14 @@ class _SplashPageState extends State<SplashPage>
   // Logo "bernapas" pelan setelah animasi pop selesai
   late final AnimationController _breatheCtrl;
 
+  // Dicek dari awal splash (paralel sama animasi) — kalau sesi lama masih
+  // valid di server, user langsung ke Home tanpa perlu Masuk/Daftar lagi.
+  late final Future<String?> _sessionFuture;
+
   @override
   void initState() {
     super.initState();
+    _sessionFuture = AuthService.instance.restoreSession();
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2600),
@@ -38,13 +45,22 @@ class _SplashPageState extends State<SplashPage>
       duration: const Duration(milliseconds: 2400),
     )..repeat(reverse: true);
 
-    // Setelah animasi selesai -> pindah ke halaman login dengan fade halus
-    _controller.addStatusListener((status) {
+    // Setelah animasi selesai -> cek hasil sesi, lalu pindah ke Home
+    // (kalau masih login) atau Login (kalau belum/sudah tidak valid)
+    _controller.addStatusListener((status) async {
       if (status == AnimationStatus.completed && mounted) {
+        String? username;
+        try {
+          username = await _sessionFuture;
+        } catch (_) {
+          username = null;
+        }
+        if (!mounted) return;
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
             transitionDuration: const Duration(milliseconds: 700),
-            pageBuilder: (_, __, ___) => const LoginPage(),
+            pageBuilder: (_, __, ___) =>
+                username != null ? const HomePage() : const LoginPage(),
             transitionsBuilder: (_, animation, __, child) {
               final curved = CurvedAnimation(
                 parent: animation,
