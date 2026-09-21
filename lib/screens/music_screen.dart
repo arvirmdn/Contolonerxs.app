@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'package:audio_service/audio_service.dart' show MediaItem;
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -93,7 +94,18 @@ class _MusicScreenState extends State<MusicScreen> {
   Future<void> _playTrack(Track track) async {
     setState(() => _currentTrack = track);
     try {
-      await _player.setUrl(track.streamUrl);
+      await _player.setAudioSource(
+        AudioSource.uri(
+          Uri.parse(track.streamUrl),
+          tag: MediaItem(
+            // ID unik per lagu, dipakai audio_service buat notifikasinya
+            id: track.id,
+            title: track.title,
+            artist: track.artist,
+            artUri: track.thumbnail.isNotEmpty ? Uri.parse(track.thumbnail) : null,
+          ),
+        ),
+      );
       await _player.play();
       // dikirim ke server, gak perlu ditunggu buat lanjut mutar
       MusikinApi.pushHistory(track).catchError((_) {});
