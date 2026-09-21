@@ -8,10 +8,16 @@ Future<void> main() async {
   // Nyalain notifikasi media sistem (lockscreen/notification shade) buat
   // player musik di MusicScreen — sekali dipanggil di sini, otomatis kepakai
   // tiap kali AudioSource yang dimuat punya tag MediaItem.
-  await JustAudioBackground.init(
-    androidNotificationChannelId: 'com.arvirmdn.contolonerxs.channel.audio',
-    androidNotificationChannelName: 'Pemutaran Musik',
-    androidNotificationOngoing: true,
-  );
+  // Dibungkus try-catch: kalau ini gagal/hang, app tetap harus kebuka,
+  // gak boleh nyangkut putih di splash screen.
+  try {
+    await JustAudioBackground.init(
+      androidNotificationChannelId: 'com.arvirmdn.contolonerxs.channel.audio',
+      androidNotificationChannelName: 'Pemutaran Musik',
+      androidNotificationOngoing: true,
+    );
+  } catch (e, st) {
+    debugPrint('JustAudioBackground.init gagal: $e\n$st');
+  }
   runApp(const ContolonerxsApp());
 }
