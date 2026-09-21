@@ -27,6 +27,39 @@ workflows:
             <uses-permission android:name="android.permission.INTERNET"/>#' "$MANIFEST"
             rm -f "$MANIFEST.bak"
           fi
+      - name: Setup notifikasi media (just_audio_background) di AndroidManifest
+        script: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          # Izin buat notifikasi/foreground service player musik
+          if ! grep -q "android.permission.WAKE_LOCK" "$MANIFEST"; then
+            sed -i.bak 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#<manifest xmlns:android="http://schemas.android.com/apk/res/android">\
+            <uses-permission android:name="android.permission.WAKE_LOCK"/>\
+            <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>\
+            <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>\
+            <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>#' "$MANIFEST"
+            rm -f "$MANIFEST.bak"
+          fi
+          # Activity utama diganti ke AudioServiceActivity biar tombol
+          # play/pause di notifikasi & lockscreen nyambung ke player
+          if grep -q 'android:name=".MainActivity"' "$MANIFEST"; then
+            sed -i.bak 's#android:name=".MainActivity"#android:name="com.ryanheise.audioservice.AudioServiceActivity"#' "$MANIFEST"
+            rm -f "$MANIFEST.bak"
+          fi
+          # Service + receiver yang nampilin & ngontrol notifikasi media
+          if ! grep -q "com.ryanheise.audioservice.AudioService" "$MANIFEST"; then
+            sed -i.bak 's#</application>#    <service android:name="com.ryanheise.audioservice.AudioService" android:foregroundServiceType="mediaPlayback" android:exported="true">\
+                <intent-filter>\
+                    <action android:name="android.media.browse.MediaBrowserService" />\
+                </intent-filter>\
+            </service>\
+            <receiver android:name="com.ryanheise.audioservice.MediaButtonReceiver" android:exported="true">\
+                <intent-filter>\
+                    <action android:name="android.intent.action.MEDIA_BUTTON" />\
+                </intent-filter>\
+            </receiver>\
+        </application>#' "$MANIFEST"
+            rm -f "$MANIFEST.bak"
+          fi
       - name: Get Flutter packages
         script: flutter packages pub get
       - name: Generate app icon custom
