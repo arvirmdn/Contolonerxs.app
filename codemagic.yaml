@@ -19,47 +19,69 @@ workflows:
             flutter create --platforms=android --org com.arvirmdn .
             echo "NEW_ANDROID=true" >> $CM_ENV
           fi
-      - name: Tambah izin INTERNET (buat fitur Musik manggil API)
+      - name: Tambah izin & setup notifikasi media (just_audio_background) di AndroidManifest
         script: |
-          MANIFEST="android/app/src/main/AndroidManifest.xml"
-          if ! grep -q "android.permission.INTERNET" "$MANIFEST"; then
-            sed -i.bak 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#<manifest xmlns:android="http://schemas.android.com/apk/res/android">\
-            <uses-permission android:name="android.permission.INTERNET"/>#' "$MANIFEST"
-            rm -f "$MANIFEST.bak"
-          fi
-      - name: Setup notifikasi media (just_audio_background) di AndroidManifest
-        script: |
-          MANIFEST="android/app/src/main/AndroidManifest.xml"
-          # Izin buat notifikasi/foreground service player musik
-          if ! grep -q "android.permission.WAKE_LOCK" "$MANIFEST"; then
-            sed -i.bak 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#<manifest xmlns:android="http://schemas.android.com/apk/res/android">\
-            <uses-permission android:name="android.permission.WAKE_LOCK"/>\
-            <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>\
-            <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>\
-            <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>#' "$MANIFEST"
-            rm -f "$MANIFEST.bak"
-          fi
-          # Activity utama diganti ke AudioServiceActivity biar tombol
-          # play/pause di notifikasi & lockscreen nyambung ke player
-          if grep -q 'android:name=".MainActivity"' "$MANIFEST"; then
-            sed -i.bak 's#android:name=".MainActivity"#android:name="com.ryanheise.audioservice.AudioServiceActivity"#' "$MANIFEST"
-            rm -f "$MANIFEST.bak"
-          fi
-          # Service + receiver yang nampilin & ngontrol notifikasi media
-          if ! grep -q "com.ryanheise.audioservice.AudioService" "$MANIFEST"; then
-            sed -i.bak 's#</application>#    <service android:name="com.ryanheise.audioservice.AudioService" android:foregroundServiceType="mediaPlayback" android:exported="true">\
-                <intent-filter>\
-                    <action android:name="android.media.browse.MediaBrowserService" />\
-                </intent-filter>\
-            </service>\
-            <receiver android:name="com.ryanheise.audioservice.MediaButtonReceiver" android:exported="true">\
-                <intent-filter>\
-                    <action android:name="android.intent.action.MEDIA_BUTTON" />\
-                </intent-filter>\
-            </receiver>\
-        </application>#' "$MANIFEST"
-            rm -f "$MANIFEST.bak"
-          fi
+          python3 - <<'PY'
+          import re
+
+          path = "android/app/src/main/AndroidManifest.xml"
+          with open(path, "r", encoding="utf-8") as f:
+              content = f.read()
+
+          # 1) Izin-izin yang dibutuhkan (INTERNET buat API musik, sisanya buat
+          #    foreground service + notifikasi media). Disisipkan tepat setelah
+          #    tag <manifest ...> pembuka, apapun atributnya.
+          needed_perms = [
+              "android.permission.INTERNET",
+              "android.permission.WAKE_LOCK",
+              "android.permission.FOREGROUND_SERVICE",
+              "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+              "android.permission.POST_NOTIFICATIONS",
+          ]
+          missing = [p for p in needed_perms if p not in content]
+          if missing:
+              lines = "\n".join(f'    <uses-permission android:name="{p}"/>' for p in missing)
+              content = re.sub(r"(<manifest[^>]*>)", r"\1\n" + lines, content, count=1)
+
+          # 2) Activity utama -> AudioServiceActivity, biar tombol notifikasi
+          #    & lockscreen nyambung ke player (cocok ke .MainActivity ATAU
+          #    nama activity custom apa pun).
+          content, n_activity = re.subn(
+              r'android:name="[^"]*MainActivity"',
+              'android:name="com.ryanheise.audioservice.AudioServiceActivity"',
+              content,
+          )
+
+          # 3) Service + receiver buat notifikasi medianya, disisipkan sebelum
+          #    </application> penutup (cuma sekali, hindari duplikat).
+          added_service = False
+          if "com.ryanheise.audioservice.AudioService" not in content:
+              injection = (
+                  '    <service android:name="com.ryanheise.audioservice.AudioService" '
+                  'android:foregroundServiceType="mediaPlayback" android:exported="true">\n'
+                  '        <intent-filter>\n'
+                  '            <action android:name="android.media.browse.MediaBrowserService" />\n'
+                  '        </intent-filter>\n'
+                  '    </service>\n'
+                  '    <receiver android:name="com.ryanheise.audioservice.MediaButtonReceiver" android:exported="true">\n'
+                  '        <intent-filter>\n'
+                  '            <action android:name="android.intent.action.MEDIA_BUTTON" />\n'
+                  '        </intent-filter>\n'
+                  '    </receiver>\n'
+                  '</application>'
+              )
+              content, n = re.subn(r"</application>", injection, content, count=1)
+              added_service = n > 0
+
+          with open(path, "w", encoding="utf-8") as f:
+              f.write(content)
+
+          print(f"[notif-media] izin ditambahin: {missing if missing else '(sudah lengkap)'}")
+          print(f"[notif-media] activity diganti ke AudioServiceActivity: {'ya' if n_activity else 'tidak ketemu / sudah'}")
+          print(f"[notif-media] service+receiver ditambahin: {'ya' if added_service else 'tidak (mungkin sudah ada)'}")
+          print("[notif-media] isi AndroidManifest.xml final:")
+          print(content)
+          PY
       - name: Get Flutter packages
         script: flutter packages pub get
       - name: Generate app icon custom
