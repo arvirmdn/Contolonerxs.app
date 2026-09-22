@@ -54,8 +54,12 @@ workflows:
 
           # 3) Service + receiver buat notifikasi medianya, disisipkan sebelum
           #    </application> penutup (cuma sekali, hindari duplikat).
+          #    PENTING: jangan cek substring "AudioService" doang — itu juga
+          #    ada di dalam "AudioServiceActivity" (activity di langkah 2),
+          #    jadi selalu "ketemu" walau <service>-nya sendiri belum ada.
+          #    Pakai marker unik "MediaButtonReceiver" buat deteksinya.
           added_service = False
-          if "com.ryanheise.audioservice.AudioService" not in content:
+          if "MediaButtonReceiver" not in content:
               injection = (
                   '    <service android:name="com.ryanheise.audioservice.AudioService" '
                   'android:foregroundServiceType="mediaPlayback" android:exported="true">\n'
