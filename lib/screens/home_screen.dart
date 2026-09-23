@@ -527,53 +527,145 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildProfil() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      child: _GlassPanel(
-        radius: 24,
-        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 84,
-              height: 84,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.12),
-                border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.4),
-              ),
-              child: const Icon(Icons.person_rounded, color: Colors.white, size: 44),
-            ),
-            const SizedBox(height: 18),
-            Row(
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      child: Column(
+        children: [
+          // --- Kartu identitas: avatar + nama ---
+          _GlassPanel(
+            radius: 24,
+            padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  _profileUsername ?? '...',
-                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(width: 6),
-                GestureDetector(
-                  onTap: () => _showChangeUsernameDialog(context),
-                  child: Container(
-                    padding: const EdgeInsets.all(5),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.12),
-                      shape: BoxShape.circle,
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: 96,
+                      height: 96,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [_accent, _primary],
+                        ),
+                        border: Border.all(color: Colors.white.withOpacity(0.35), width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _accent.withOpacity(0.35),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.person_rounded, color: Colors.white, size: 50),
                     ),
-                    child: const Icon(Icons.edit_rounded, color: Colors.white, size: 14),
+                    Positioned(
+                      right: -2,
+                      bottom: -2,
+                      child: GestureDetector(
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Fitur ganti foto profil segera hadir')),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2E2A5C),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white.withOpacity(0.4), width: 1.4),
+                          ),
+                          child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 16),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        _profileUsername ?? '...',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () => _showChangeUsernameDialog(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.edit_rounded, color: Colors.white, size: 14),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Akun Contolonerxs',
+                    style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 12.5, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
-            Text(
-              'Akun Contolonerxs',
-              style: TextStyle(color: Colors.white.withOpacity(0.65), fontSize: 14),
+          ),
+          const SizedBox(height: 16),
+          // --- Menu cepat akun ---
+          _GlassPanel(
+            radius: 20,
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                _settingsTile(
+                  Icons.lock_rounded,
+                  'Ganti Kata Sandi',
+                  onTap: () => _showChangePasswordDialog(context),
+                ),
+                _divider(),
+                _settingsTile(
+                  Icons.settings_rounded,
+                  'Pengaturan Lainnya',
+                  onTap: () => _setNavIndex(3),
+                ),
+                _divider(),
+                _settingsTile(
+                  Icons.info_rounded,
+                  'Tentang Aplikasi',
+                  onTap: () => _showAboutDialog(context),
+                ),
+                _divider(),
+                _settingsTile(
+                  Icons.logout_rounded,
+                  'Keluar',
+                  danger: true,
+                  onTap: () async {
+                    await AuthService.instance.logout();
+                    if (!context.mounted) return;
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const LoginPage()),
+                      (route) => false,
+                    );
+                  },
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
