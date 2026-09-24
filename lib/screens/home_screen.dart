@@ -1,13 +1,14 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/auth_service.dart';
 import 'login_screen.dart';
 import 'music_screen.dart';
 
 // ---------------------------------------------------------------------------
-// HALAMAN HOME — layout ala Telegram (Obrolan/Room/Pengaturan/Profil),
+// HALAMAN HOME — layout ala Telegram (Obrolan/Room/Musik/Profil),
 // tema glassmorphism senada halaman login
 // ---------------------------------------------------------------------------
 class HomePage extends StatefulWidget {
@@ -18,10 +19,10 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  static const Color _primary = Color(0xFF4F46E5);
-  static const Color _accent = Color(0xFF7C3AED);
+  static const Color _primary = Color(0xFFC2410C);
+  static const Color _accent = Color(0xFFEA580C);
 
-  // 0 = Obrolan, 1 = Room, 2 = Musik, 3 = Pengaturan, 4 = Profil
+  // 0 = Obrolan, 1 = Room, 2 = Musik, 3 = Profil (pengaturan digabung di sini)
   int _navIndex = 0;
   // 0 = Semua Obrolan, 1 = Arsip (cuma dipakai kalau _navIndex == 0)
   int _chatTab = 0;
@@ -36,6 +37,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadProfileUsername();
+    _loadPrefs();
   }
 
   @override
@@ -55,7 +57,7 @@ class _HomePageState extends State<HomePage> {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF312E81), _primary, _accent],
+                colors: [Color(0xFF7C2D12), _primary, _accent],
                 stops: [0.0, 0.55, 1.0],
               ),
             ),
@@ -121,27 +123,22 @@ class _HomePageState extends State<HomePage> {
                               ),
                             PopupMenuButton<String>(
                               icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
-                              color: const Color(0xFF2E2A5C),
+                              color: const Color(0xFF2A231D),
                               onSelected: (value) async {
-                                if (value == 'pengaturan') {
+                                if (value == 'profil') {
                                   _setNavIndex(3);
                                 } else if (value == 'keluar') {
-                                  await AuthService.instance.logout();
-                                  if (!context.mounted) return;
-                                  Navigator.of(context).pushAndRemoveUntil(
-                                    MaterialPageRoute(builder: (_) => const LoginPage()),
-                                    (route) => false,
-                                  );
+                                  await _logout();
                                 }
                               },
                               itemBuilder: (context) => const [
                                 PopupMenuItem(
-                                  value: 'pengaturan',
+                                  value: 'profil',
                                   child: Row(
                                     children: [
-                                      Icon(Icons.settings_rounded, color: Colors.white, size: 19),
+                                      Icon(Icons.person_rounded, color: Colors.white, size: 19),
                                       SizedBox(width: 10),
-                                      Text('Pengaturan', style: TextStyle(color: Colors.white)),
+                                      Text('Profil & Pengaturan', style: TextStyle(color: Colors.white)),
                                     ],
                                   ),
                                 ),
@@ -216,7 +213,7 @@ class _HomePageState extends State<HomePage> {
                 // Konten sesuai tab bawah yang aktif
                 Expanded(child: _buildContent()),
 
-                // Bottom nav: Obrolan / Room / Pengaturan / Profil
+                // Bottom nav: Obrolan / Room / Musik / Profil
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
                   child: _GlassPanel(
@@ -245,16 +242,10 @@ class _HomePageState extends State<HomePage> {
                           onTap: () => _setNavIndex(2),
                         ),
                         _NavItem(
-                          icon: Icons.settings_rounded,
-                          label: 'Pengaturan',
-                          selected: _navIndex == 3,
-                          onTap: () => _setNavIndex(3),
-                        ),
-                        _NavItem(
                           icon: Icons.person_rounded,
                           label: 'Profil',
-                          selected: _navIndex == 4,
-                          onTap: () => _setNavIndex(4),
+                          selected: _navIndex == 3,
+                          onTap: () => _setNavIndex(3),
                         ),
                       ],
                     ),
@@ -309,50 +300,9 @@ class _HomePageState extends State<HomePage> {
           padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
           child: MusicScreen(),
         );
-      case 3:
-        return _buildPengaturan();
       default:
         return _buildProfil();
     }
-  }
-
-  Widget _buildPengaturan() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: _GlassPanel(
-        radius: 20,
-        padding: EdgeInsets.zero,
-        child: Column(
-          children: [
-            _settingsTile(
-              Icons.lock_rounded,
-              'Privasi & Keamanan',
-              onTap: () => _showChangePasswordDialog(context),
-            ),
-            _divider(),
-            _settingsTile(
-              Icons.info_rounded,
-              'Tentang Aplikasi',
-              onTap: () => _showAboutDialog(context),
-            ),
-            _divider(),
-            _settingsTile(
-              Icons.logout_rounded,
-              'Keluar',
-              danger: true,
-              onTap: () async {
-                await AuthService.instance.logout();
-                if (!context.mounted) return;
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                  (route) => false,
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showChangePasswordDialog(BuildContext context) {
@@ -409,7 +359,7 @@ class _HomePageState extends State<HomePage> {
             }
 
             return AlertDialog(
-              backgroundColor: const Color(0xFF2E2A5C),
+              backgroundColor: const Color(0xFF2A231D),
               title: const Text('Ubah Sandi', style: TextStyle(color: Colors.white)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -487,7 +437,13 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _settingsTile(IconData icon, String label, {bool danger = false, VoidCallback? onTap}) {
+  Widget _settingsTile(
+    IconData icon,
+    String label, {
+    String? subtitle,
+    bool danger = false,
+    VoidCallback? onTap,
+  }) {
     return ListTile(
       onTap: onTap,
       leading: Icon(icon, color: danger ? Colors.redAccent.shade100 : Colors.white),
@@ -498,9 +454,86 @@ class _HomePageState extends State<HomePage> {
           fontWeight: FontWeight.w600,
         ),
       ),
+      subtitle: subtitle == null
+          ? null
+          : Text(
+              subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 12.5),
+            ),
       trailing: danger
           ? null
           : const Icon(Icons.chevron_right_rounded, color: Colors.white54),
+    );
+  }
+
+  Widget _switchTile(
+    IconData icon,
+    String label,
+    String subtitle,
+    bool value,
+    ValueChanged<bool> onChanged,
+  ) {
+    return ListTile(
+      onTap: () => onChanged(!value),
+      leading: Icon(icon, color: Colors.white),
+      title: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 12.5),
+      ),
+      trailing: Switch(
+        value: value,
+        onChanged: onChanged,
+        activeColor: Colors.white,
+        activeTrackColor: _accent,
+        inactiveThumbColor: Colors.white70,
+        inactiveTrackColor: Colors.white.withOpacity(0.15),
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String text) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(6, 20, 6, 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          text.toUpperCase(),
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.55),
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _statTile(IconData icon, String value, String label) {
+    return Expanded(
+      child: _GlassPanel(
+        radius: 18,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.white.withOpacity(0.7), size: 20),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 11.5, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -515,6 +548,35 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // Preferensi lokal di halaman Profil (disimpan di SharedPreferences)
+  static const String _prefNotifKey = 'contolonerxs_pref_notif';
+  static const String _prefSoundKey = 'contolonerxs_pref_sound';
+  bool _notifOn = true;
+  bool _soundOn = true;
+
+  Future<void> _loadPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _notifOn = prefs.getBool(_prefNotifKey) ?? true;
+      _soundOn = prefs.getBool(_prefSoundKey) ?? true;
+    });
+  }
+
+  Future<void> _setPref(String key, bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(key, value);
+  }
+
+  Future<void> _logout() async {
+    await AuthService.instance.logout();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
+  }
+
   void _setNavIndex(int index) {
     setState(() {
       _navIndex = index;
@@ -527,125 +589,205 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildProfil() {
+    final String name = _profileUsername ?? '...';
+    final String? initial = (_profileUsername != null && _profileUsername!.isNotEmpty)
+        ? _profileUsername!.substring(0, 1).toUpperCase()
+        : null;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
       child: Column(
         children: [
-          // --- Kartu identitas: avatar + nama ---
+          // --- Kartu identitas: avatar (inisial) + nama + status ---
           _GlassPanel(
             radius: 24,
-            padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: 96,
-                      height: 96,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [_accent, _primary],
-                        ),
-                        border: Border.all(color: Colors.white.withOpacity(0.35), width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _accent.withOpacity(0.35),
-                            blurRadius: 20,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                      child: const Icon(Icons.person_rounded, color: Colors.white, size: 50),
-                    ),
-                    Positioned(
-                      right: -2,
-                      bottom: -2,
-                      child: GestureDetector(
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Fitur ganti foto profil segera hadir')),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(7),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2E2A5C),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white.withOpacity(0.4), width: 1.4),
-                          ),
-                          child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 16),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        _profileUsername ?? '...',
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    GestureDetector(
-                      onTap: () => _showChangeUsernameDialog(context),
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.symmetric(vertical: 26, horizontal: 20),
+            child: SizedBox(
+              width: double.infinity,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        width: 100,
+                        height: 100,
+                        padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.12),
                           shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white.withOpacity(0.25), width: 1.5),
                         ),
-                        child: const Icon(Icons.edit_rounded, color: Colors.white, size: 14),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [_accent, _primary],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: _accent.withOpacity(0.4),
+                                blurRadius: 22,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                          alignment: Alignment.center,
+                          child: initial == null
+                              ? const Icon(Icons.person_rounded, color: Colors.white, size: 50)
+                              : Text(
+                                  initial,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 40,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.10),
-                    borderRadius: BorderRadius.circular(20),
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: GestureDetector(
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Fitur ganti foto profil segera hadir')),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(7),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2A231D),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white.withOpacity(0.4), width: 1.4),
+                            ),
+                            child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 16),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  child: Text(
-                    'Akun Contolonerxs',
-                    style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 12.5, fontWeight: FontWeight.w600),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          name,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      GestureDetector(
+                        onTap: () => _showChangeUsernameDialog(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.edit_rounded, color: Colors.white, size: 14),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 10),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _profileChip(text: 'Akun Contolonerxs'),
+                      _profileChip(text: 'Aktif', dotColor: const Color(0xFF4ADE80)),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 16),
-          // --- Menu cepat akun ---
+          const SizedBox(height: 12),
+
+          // --- Ringkasan cepat ---
+          Row(
+            children: [
+              _statTile(Icons.chat_bubble_rounded, '0', 'Obrolan'),
+              const SizedBox(width: 10),
+              _statTile(Icons.meeting_room_rounded, '0', 'Room'),
+              const SizedBox(width: 10),
+              _statTile(Icons.verified_user_rounded, 'Aman', 'Status'),
+            ],
+          ),
+
+          // --- Akun ---
+          _sectionTitle('Akun'),
           _GlassPanel(
             radius: 20,
             padding: EdgeInsets.zero,
             child: Column(
               children: [
                 _settingsTile(
-                  Icons.lock_rounded,
-                  'Ganti Kata Sandi',
-                  onTap: () => _showChangePasswordDialog(context),
+                  Icons.badge_rounded,
+                  'Nama Akun',
+                  subtitle: name,
+                  onTap: () => _showChangeUsernameDialog(context),
                 ),
                 _divider(),
                 _settingsTile(
-                  Icons.settings_rounded,
-                  'Pengaturan Lainnya',
-                  onTap: () => _setNavIndex(3),
+                  Icons.lock_rounded,
+                  'Privasi & Keamanan',
+                  subtitle: 'Ganti kata sandi',
+                  onTap: () => _showChangePasswordDialog(context),
+                ),
+              ],
+            ),
+          ),
+
+          // --- Preferensi ---
+          _sectionTitle('Preferensi'),
+          _GlassPanel(
+            radius: 20,
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                _switchTile(
+                  Icons.notifications_rounded,
+                  'Notifikasi',
+                  'Pemberitahuan pesan & room',
+                  _notifOn,
+                  (v) {
+                    setState(() => _notifOn = v);
+                    _setPref(_prefNotifKey, v);
+                  },
                 ),
                 _divider(),
+                _switchTile(
+                  Icons.volume_up_rounded,
+                  'Suara',
+                  'Nada saat ada notifikasi',
+                  _soundOn,
+                  (v) {
+                    setState(() => _soundOn = v);
+                    _setPref(_prefSoundKey, v);
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          // --- Lainnya ---
+          _sectionTitle('Lainnya'),
+          _GlassPanel(
+            radius: 20,
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
                 _settingsTile(
                   Icons.info_rounded,
                   'Tentang Aplikasi',
+                  subtitle: 'Versi 1.0.0',
                   onTap: () => _showAboutDialog(context),
                 ),
                 _divider(),
@@ -653,17 +795,47 @@ class _HomePageState extends State<HomePage> {
                   Icons.logout_rounded,
                   'Keluar',
                   danger: true,
-                  onTap: () async {
-                    await AuthService.instance.logout();
-                    if (!context.mounted) return;
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (_) => const LoginPage()),
-                      (route) => false,
-                    );
-                  },
+                  onTap: _logout,
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Aman • Cepat • Terpercaya',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.35),
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _profileChip({required String text, Color? dotColor}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (dotColor != null) ...[
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 6),
+          ],
+          Text(
+            text,
+            style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 12.5, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -714,7 +886,7 @@ class _HomePageState extends State<HomePage> {
             }
 
             return AlertDialog(
-              backgroundColor: const Color(0xFF2E2A5C),
+              backgroundColor: const Color(0xFF2A231D),
               title: const Text('Ganti Nama Akun', style: TextStyle(color: Colors.white)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -895,7 +1067,7 @@ class _Badge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(
-        color: const Color(0xFF7C3AED),
+        color: const Color(0xFFEA580C),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(

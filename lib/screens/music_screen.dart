@@ -152,7 +152,7 @@ class _MusicScreenState extends State<MusicScreen> {
     }
     final chosen = await showModalBottomSheet<Playlist>(
       context: context,
-      backgroundColor: const Color(0xFF23243A),
+      backgroundColor: const Color(0xFF2A231D),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -190,7 +190,7 @@ class _MusicScreenState extends State<MusicScreen> {
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF23243A),
+        backgroundColor: const Color(0xFF2A231D),
         title: Text(title, style: const TextStyle(color: Colors.white)),
         content: TextField(
           controller: ctrl,
@@ -600,7 +600,7 @@ class _FullPlayerSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Positioned.fill(
       child: Material(
-        color: const Color(0xFF14152080),
+        color: const Color(0xFF1A151280),
         child: BackdropFilter(
           filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: SafeArea(

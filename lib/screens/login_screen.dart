@@ -49,8 +49,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   late final Listenable _lockAndPulse;
   _LockState _lockState = _LockState.idle;
 
-  static const Color _primary = Color(0xFF4F46E5);
-  static const Color _accent = Color(0xFF7C3AED);
+  static const Color _primary = Color(0xFFC2410C);
+  static const Color _accent = Color(0xFFEA580C);
   static const Color _success = Color(0xFF16A34A);
 
   bool get _isRegister => _mode == _AuthMode.register;
@@ -215,7 +215,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           Positioned(
             bottom: -100,
             left: -70,
-            child: _orb(280, const Color(0xFF9333EA).withOpacity(0.30)),
+            child: _orb(280, const Color(0xFFF59E0B).withOpacity(0.30)),
           ),
           SafeArea(
             child: Center(
@@ -268,9 +268,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
               begin: Alignment(-1 + 0.5 * math.sin(2 * math.pi * t), -1),
               end: Alignment(1, 1 + 0.35 * math.cos(2 * math.pi * t)),
               colors: [
-                drift(const Color(0xFF1E1B4B), const Color(0xFF312E81), 0.0),
+                drift(const Color(0xFF1C1917), const Color(0xFF7C2D12), 0.0),
                 drift(_primary, _accent, 0.33),
-                drift(_accent, const Color(0xFF4C1D95), 0.66),
+                drift(_accent, const Color(0xFF9A3412), 0.66),
               ],
             ),
           ),
@@ -398,7 +398,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             decoration: BoxDecoration(
               gradient: active
                   ? const LinearGradient(
-                      colors: [Color(0xFF6D64F0), _accent],
+                      colors: [Color(0xFFF97316), _accent],
                     )
                   : null,
               borderRadius: BorderRadius.circular(13),
@@ -646,7 +646,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       contentPadding: const EdgeInsets.symmetric(vertical: 16),
       border: border(idle),
       enabledBorder: border(idle),
-      focusedBorder: border(const Color(0xFFA78BFA), width: 1.6),
+      focusedBorder: border(const Color(0xFFFB923C), width: 1.6),
       errorBorder: border(Colors.redAccent),
       focusedErrorBorder: border(Colors.redAccent, width: 1.6),
       errorStyle: GoogleFonts.plusJakartaSans(
@@ -664,7 +664,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         fontSize: 14,
         color: Colors.white,
       ),
-      cursorColor: const Color(0xFFA78BFA),
+      cursorColor: const Color(0xFFFB923C),
       decoration: _fieldDecoration(
         label: 'Nama',
         prefix: Icons.person_outline,
@@ -687,7 +687,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         fontSize: 14,
         color: Colors.white,
       ),
-      cursorColor: const Color(0xFFA78BFA),
+      cursorColor: const Color(0xFFFB923C),
       decoration: _fieldDecoration(
         label: 'Sandi',
         prefix: Icons.lock_outline,
@@ -725,7 +725,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         fontSize: 14,
         color: Colors.white,
       ),
-      cursorColor: const Color(0xFFA78BFA),
+      cursorColor: const Color(0xFFFB923C),
       decoration: _fieldDecoration(
         label: 'Ulangi Sandi',
         prefix: Icons.lock_reset_outlined,
@@ -760,7 +760,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       height: 54,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF6D64F0), _accent],
+          colors: [Color(0xFFF97316), _accent],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [

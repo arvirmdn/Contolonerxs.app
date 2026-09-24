@@ -117,13 +117,13 @@ class _SplashPageState extends State<SplashPage>
                 end: Alignment.bottomRight,
                 colors: [
                   Color.lerp(
-                    const Color(0xFF4F46E5),
-                    const Color(0xFF312E81),
+                    const Color(0xFFC2410C),
+                    const Color(0xFF7C2D12),
                     _controller.value,
                   )!,
                   Color.lerp(
-                    const Color(0xFF9333EA),
-                    const Color(0xFF4C1D95),
+                    const Color(0xFFF59E0B),
+                    const Color(0xFF9A3412),
                     _controller.value,
                   )!,
                 ],
@@ -245,7 +245,7 @@ class _SplashPageState extends State<SplashPage>
                 child: const Icon(
                   Icons.lock_person_rounded,
                   size: 48,
-                  color: Color(0xFF4F46E5),
+                  color: Color(0xFFC2410C),
                 ),
               ),
             ],
