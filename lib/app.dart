@@ -13,8 +13,8 @@ class ContolonerxsApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF4F46E5),
-        scaffoldBackgroundColor: const Color(0xFF1A1B25),
+        colorSchemeSeed: const Color(0xFFC2410C),
+        scaffoldBackgroundColor: const Color(0xFF1C1917),
         textTheme: GoogleFonts.plusJakartaSansTextTheme(),
       ),
       home: const SplashPage(),
